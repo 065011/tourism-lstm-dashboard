@@ -1,18 +1,10 @@
-<<<<<<< HEAD
 streamlit
 pandas
 numpy
 matplotlib
 plotly
+scikit-learn
 wordcloud
 vaderSentiment
-=======
-streamlit
-pandas
-numpy
-matplotlib
-plotly
-wordcloud
-vaderSentiment
->>>>>>> a3243c90ad18cd95e29aecd6e1017332d695056f
 feedparser
+torch==2.2.2 --index-url https://download.pytorch.org/whl/cpu

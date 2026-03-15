@@ -18,7 +18,7 @@ st.set_page_config(page_title="Tourism Analytics Dashboard", layout="wide")
 
 st.title("🌍 Tourism Forecast and Sentiment Analytics Dashboard")
 
-st.write("This dashboard analyzes tourism demand trends and tourist sentiment using Machine Learning and NLP.")
+st.write("Tourism demand forecasting and sentiment analytics using AI and NLP.")
 
 # ------------------------------------------------
 # LOAD DATA
@@ -32,27 +32,18 @@ def load_data():
     return data
 
 data = load_data()
-
 values = data["Passengers"].values.reshape(-1,1)
 
 # ------------------------------------------------
-# TOURISM TREND VISUALIZATION
+# TOURISM TREND
 # ------------------------------------------------
 
 st.header("📈 Tourism Demand Trend")
 
-fig = px.line(
-    data,
-    x="Month",
-    y="Passengers",
-    title="Tourism Demand Trend"
-)
-
+fig = px.line(data, x="Month", y="Passengers")
 st.plotly_chart(fig)
 
-# KPI METRICS
-
-col1, col2, col3 = st.columns(3)
+col1,col2,col3 = st.columns(3)
 
 col1.metric("Total Records", len(data))
 col2.metric("Average Tourists", int(data["Passengers"].mean()))
@@ -62,7 +53,7 @@ col3.metric("Maximum Tourists", int(data["Passengers"].max()))
 # LSTM FORECAST MODEL
 # ------------------------------------------------
 
-st.subheader("🔮 Tourism Demand Forecast (LSTM Model)")
+st.subheader("🔮 Tourism Demand Forecast (LSTM)")
 
 @st.cache_resource
 def train_model(values):
@@ -76,7 +67,6 @@ def train_model(values):
         y=[]
 
         for i in range(len(data)-window):
-
             X.append(data[i:i+window])
             y.append(data[i+window])
 
@@ -103,18 +93,14 @@ def train_model(values):
     class TourismLSTM(nn.Module):
 
         def __init__(self):
-
             super(TourismLSTM,self).__init__()
-
             self.lstm=nn.LSTM(1,50,batch_first=True)
             self.fc=nn.Linear(50,1)
 
         def forward(self,x):
-
             out,_=self.lstm(x)
             out=out[:,-1,:]
             out=self.fc(out)
-
             return out
 
     model=TourismLSTM()
@@ -125,47 +111,37 @@ def train_model(values):
     for epoch in range(20):
 
         output=model(X_train)
-
         loss=criterion(output,y_train)
 
         optimizer.zero_grad()
-
         loss.backward()
-
         optimizer.step()
 
     with torch.no_grad():
-
         pred=model(X_test).numpy()
 
     pred=scaler.inverse_transform(pred)
-
     actual=scaler.inverse_transform(y_test.numpy())
 
     rmse=np.sqrt(mean_squared_error(actual,pred))
 
-    return pred, actual, rmse, train_size, window, values
+    return pred,actual,rmse,train_size,window
 
-pred, actual, rmse, train_size, window, values = train_model(values)
+pred,actual,rmse,train_size,window = train_model(values)
 
-st.metric("Forecast RMSE", round(rmse,2))
-
-# ------------------------------------------------
-# FORECAST GRAPH
-# ------------------------------------------------
+st.metric("Forecast RMSE",round(rmse,2))
 
 forecast_plot=np.empty_like(values,dtype=float)
 forecast_plot[:]=np.nan
-
 forecast_plot[train_size+window:]=pred
 
-fig2,ax = plt.subplots(figsize=(10,5))
+fig2,ax=plt.subplots()
 
-ax.plot(values,label="Actual Tourism Demand")
+ax.plot(values,label="Actual")
 ax.plot(forecast_plot,label="Forecast")
 
-ax.set_title("Tourism Demand Forecast")
 ax.legend()
+ax.set_title("Tourism Demand Forecast")
 
 st.pyplot(fig2)
 
@@ -175,90 +151,56 @@ st.pyplot(fig2)
 
 st.divider()
 
-st.header("🧳 Tourist Review Sentiment Analysis")
+st.header("🧳 Tourist Review Sentiment")
 
 analyzer = SentimentIntensityAnalyzer()
 
-review = st.text_area("Enter Tourist Review")
+review = st.text_area("Enter Review")
 
-if review != "":
+if review:
 
     clean = re.sub(r'[^a-zA-Z\s]','',review.lower())
 
     score = analyzer.polarity_scores(clean)
 
-    compound = score["compound"]
-    pos = score["pos"]
-    neg = score["neg"]
-    neu = score["neu"]
+    compound=score["compound"]
 
-    if compound >= 0.05:
-
-        st.success("😊 Positive Sentiment")
-
-    elif compound <= -0.05:
-
-        st.error("😡 Negative Sentiment")
-
+    if compound>=0.05:
+        st.success("Positive Sentiment")
+    elif compound<=-0.05:
+        st.error("Negative Sentiment")
     else:
+        st.warning("Neutral Sentiment")
 
-        st.warning("😐 Neutral Sentiment")
+    st.write("Score:",compound)
 
-    st.write("Sentiment Score:", compound)
+    pos,neu,neg = score["pos"],score["neu"],score["neg"]
 
-    st.subheader("Sentiment Probability")
+    fig3,ax=plt.subplots()
 
-    col1,col2,col3 = st.columns(3)
-
-    col1.metric("Positive",round(pos,3))
-    col2.metric("Neutral",round(neu,3))
-    col3.metric("Negative",round(neg,3))
-
-    # BAR CHART
-
-    fig3,ax = plt.subplots()
-
-    labels = ["Negative","Neutral","Positive"]
-    values_sent = [neg,neu,pos]
-
-    ax.bar(labels,values_sent)
-
-    ax.set_ylabel("Score")
+    ax.bar(["Negative","Neutral","Positive"],[neg,neu,pos])
 
     st.pyplot(fig3)
 
-# ------------------------------------------------
-# WORD FREQUENCY
-# ------------------------------------------------
-
-    st.subheader("Word Frequency")
+    # Word Frequency
 
     words = clean.split()
 
-    freq = Counter(words)
+    freq = Counter(words).most_common(10)
 
-    common = freq.most_common(10)
+    w=[i[0] for i in freq]
+    c=[i[1] for i in freq]
 
-    w = [i[0] for i in common]
-    c = [i[1] for i in common]
-
-    fig4,ax = plt.subplots()
+    fig4,ax=plt.subplots()
 
     ax.bar(w,c)
-
-    ax.set_title("Top Words")
-
     st.pyplot(fig4)
 
-# ------------------------------------------------
-# WORD CLOUD
-# ------------------------------------------------
+    # Word Cloud
 
-    st.subheader("Word Cloud")
+    wc = WordCloud(width=800,height=400).generate(clean)
 
-    wc = WordCloud(width=800,height=400,background_color="white").generate(clean)
-
-    fig5,ax = plt.subplots()
+    fig5,ax=plt.subplots()
 
     ax.imshow(wc)
     ax.axis("off")
@@ -266,105 +208,23 @@ if review != "":
     st.pyplot(fig5)
 
 # ------------------------------------------------
-# SAMPLE DATASET SENTIMENT
+# NEWS SENTIMENT
 # ------------------------------------------------
 
 st.divider()
 
-st.header("📊 Sample Tourism Review Dataset")
+st.header("📰 Tourism News")
 
-sample_reviews = [
+rss_url="https://news.google.com/rss/search?q=tourism"
 
-"Beautiful beaches and wonderful hospitality",
-"Terrible hotel service and dirty rooms",
-"Amazing sightseeing experience",
-"Overcrowded tourist attractions",
-"Great food and friendly locals",
-"Bad weather ruined the trip",
-"Fantastic cultural heritage sites",
-"Transportation was slow",
-"Excellent travel experience",
-"Average tourist services"
+feed=feedparser.parse(rss_url)
 
-]
+for article in feed.entries[:5]:
 
-df = pd.DataFrame(sample_reviews,columns=["review"])
+    title=article.title
+    link=article.link
 
-scores=[]
-sentiments=[]
-
-for text in df["review"]:
-
-    s = analyzer.polarity_scores(text)["compound"]
-
-    scores.append(s)
-
-    if s>=0.05:
-        sentiments.append("Positive")
-    elif s<=-0.05:
-        sentiments.append("Negative")
-    else:
-        sentiments.append("Neutral")
-
-df["sentiment_score"]=scores
-df["sentiment"]=sentiments
-
-st.dataframe(df)
-
-# PIE CHART
-
-st.subheader("Sentiment Distribution")
-
-counts = df["sentiment"].value_counts()
-
-fig6,ax = plt.subplots()
-
-ax.pie(counts,labels=counts.index,autopct="%1.1f%%")
-
-st.pyplot(fig6)
-
-# ------------------------------------------------
-# SENTIMENT TREND
-# ------------------------------------------------
-
-st.subheader("Sentiment Trend")
-
-trend_df = pd.DataFrame({
-
-"Index":range(len(scores)),
-"Sentiment Score":scores
-
-})
-
-fig7,ax = plt.subplots()
-
-ax.plot(trend_df["Index"],trend_df["Sentiment Score"],marker="o")
-
-ax.set_xlabel("Review Index")
-ax.set_ylabel("Sentiment Score")
-
-st.pyplot(fig7)
-
-# ------------------------------------------------
-# TOURISM NEWS SENTIMENT
-# ------------------------------------------------
-
-st.divider()
-
-st.header("📰 Tourism Industry News Sentiment")
-
-rss_url = "https://news.google.com/rss/search?q=tourism"
-
-feed = feedparser.parse(rss_url)
-
-articles = feed.entries[:5]
-
-for article in articles:
-
-    title = article.title
-    link = article.link
-
-    score = analyzer.polarity_scores(title)["compound"]
+    score=analyzer.polarity_scores(title)["compound"]
 
     if score>=0.05:
         label="Positive"
@@ -374,11 +234,6 @@ for article in articles:
         label="Neutral"
 
     st.write("###",title)
-
     st.write("Sentiment:",label)
-
     st.write(link)
-
     st.write("---")
-
-st.write("Dashboard developed using Streamlit for Tourism Analytics.")
