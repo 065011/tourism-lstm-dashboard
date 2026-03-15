@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 streamlit
 pandas
 numpy
@@ -5,4 +6,13 @@ matplotlib
 plotly
 wordcloud
 vaderSentiment
+=======
+streamlit
+pandas
+numpy
+matplotlib
+plotly
+wordcloud
+vaderSentiment
+>>>>>>> a3243c90ad18cd95e29aecd6e1017332d695056f
 feedparser
